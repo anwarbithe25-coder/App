@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "FossApp": {
+      "title": "FossApp",
+      "description": "Open-source software or game listed in the OpenPlay store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "tagline": { "type": "string" },
+        "description": { "type": "string" },
+        "packageName": { "type": "string" },
+        "category": { "type": "string" },
+        "subcategory": { "type": "string" },
+        "license": { "type": "string" },
+        "gitRepoUrl": { "type": "string" },
+        "gitBranch": { "type": "string" },
+        "latestGitTag": { "type": "string" },
+        "commitSha": { "type": "string" },
+        "versionName": { "type": "string" },
+        "versionCode": { "type": "integer" },
+        "apkSizeMb": { "type": "number" },
+        "apkSha256": { "type": "string" },
+        "reproducibleVerified": { "type": "boolean" },
+        "trackerCount": { "type": "integer" },
+        "developerName": { "type": "string" },
+        "userId": { "type": "string" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "integer" },
+        "downloadCount": { "type": "integer" },
+        "buildSystem": { "type": "string" },
+        "iconKey": { "type": "string" },
+        "donationLiberapay": { "type": "string" },
+        "donationGithub": { "type": "string" },
+        "donationCrypto": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "tagline", "packageName", "category", "license", "gitRepoUrl", "userId", "createdAt"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Community review or transparency audit for an open-source application",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "appId": { "type": "string" },
+        "userId": { "type": "string" },
+        "author": { "type": "string" },
+        "rating": { "type": "integer" },
+        "title": { "type": "string" },
+        "comment": { "type": "string" },
+        "isAuditor": { "type": "boolean" },
+        "auditorRole": { "type": "string" },
+        "auditedCommit": { "type": "string" },
+        "helpfulVotes": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "appId", "userId", "author", "rating", "title", "comment", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/apps/{appId}": {
+      "schema": { "$ref": "#/entities/FossApp" },
+      "description": "Public directory of verified open-source apps and games."
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Public community reviews and reproducible build audits for apps."
+    }
+  }
+}

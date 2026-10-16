@@ -1,0 +1,6 @@
+{
+  "name": "OpenPlay",
+  "description": "An open-source software and game store with a privacy-first interface, reproducible build verification, Git version control integration, community reviews, and developer donations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

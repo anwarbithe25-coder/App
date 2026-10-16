@@ -1,0 +1,131 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidApp(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.tagline is string && data.tagline.size() <= 200 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 5000)) &&
+             data.packageName is string && data.packageName.size() > 0 && data.packageName.size() <= 200 &&
+             data.category is string && data.category.size() <= 50 &&
+             (!('subcategory' in data) || (data.subcategory is string && data.subcategory.size() <= 50)) &&
+             data.license is string && data.license.size() <= 50 &&
+             data.gitRepoUrl is string && data.gitRepoUrl.size() <= 500 &&
+             (!('gitBranch' in data) || (data.gitBranch is string && data.gitBranch.size() <= 100)) &&
+             (!('latestGitTag' in data) || (data.latestGitTag is string && data.latestGitTag.size() <= 50)) &&
+             (!('commitSha' in data) || (data.commitSha is string && data.commitSha.size() <= 64)) &&
+             (!('versionName' in data) || (data.versionName is string && data.versionName.size() <= 50)) &&
+             (!('versionCode' in data) || data.versionCode is int) &&
+             (!('apkSizeMb' in data) || (data.apkSizeMb is number && data.apkSizeMb >= 0)) &&
+             (!('apkSha256' in data) || (data.apkSha256 is string && data.apkSha256.size() <= 128)) &&
+             (!('reproducibleVerified' in data) || data.reproducibleVerified is bool) &&
+             (!('trackerCount' in data) || (data.trackerCount is int && data.trackerCount >= 0)) &&
+             (!('developerName' in data) || (data.developerName is string && data.developerName.size() <= 100)) &&
+             data.userId is string && data.userId.size() <= 128 &&
+             (!('rating' in data) || (data.rating is number && data.rating >= 0 && data.rating <= 5)) &&
+             (!('reviewCount' in data) || (data.reviewCount is int && data.reviewCount >= 0)) &&
+             (!('downloadCount' in data) || (data.downloadCount is int && data.downloadCount >= 0)) &&
+             (!('buildSystem' in data) || (data.buildSystem is string && data.buildSystem.size() <= 100)) &&
+             (!('iconKey' in data) || (data.iconKey is string && data.iconKey.size() <= 50)) &&
+             (!('donationLiberapay' in data) || (data.donationLiberapay is string && data.donationLiberapay.size() <= 500)) &&
+             (!('donationGithub' in data) || (data.donationGithub is string && data.donationGithub.size() <= 500)) &&
+             (!('donationCrypto' in data) || (data.donationCrypto is string && data.donationCrypto.size() <= 200)) &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidReview(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.appId is string && data.appId.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.author is string && data.author.size() > 0 && data.author.size() <= 100 &&
+             data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.comment is string && data.comment.size() > 0 && data.comment.size() <= 2000 &&
+             (!('isAuditor' in data) || data.isAuditor is bool) &&
+             (!('auditorRole' in data) || (data.auditorRole is string && data.auditorRole.size() <= 100)) &&
+             (!('auditedCommit' in data) || (data.auditedCommit is string && data.auditedCommit.size() <= 64)) &&
+             (!('helpfulVotes' in data) || (data.helpfulVotes is int && data.helpfulVotes >= 0)) &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    // Apps collection
+    match /apps/{appId} {
+      allow get, list: if true;
+
+      allow create: if isSignedIn() &&
+                       isValidId(appId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['id', 'name', 'tagline', 'packageName', 'category', 'license', 'gitRepoUrl', 'userId', 'createdAt']) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       isValidApp(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(appId) &&
+                       (
+                         // Author can update metadata
+                         (existing().userId == request.auth.uid && incoming().userId == existing().userId) ||
+                         // Any signed-in user can increment downloadCount or update community rating/reviewCount
+                         incoming().diff(existing()).affectedKeys().hasOnly(['rating', 'reviewCount', 'downloadCount', 'updatedAt'])
+                       ) &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidApp(incoming());
+
+      allow delete: if isSignedIn() &&
+                       isValidId(appId) &&
+                       existing().userId == request.auth.uid;
+    }
+
+    // Community Reviews collection
+    match /reviews/{reviewId} {
+      allow get, list: if true;
+
+      allow create: if isSignedIn() &&
+                       isValidId(reviewId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['id', 'appId', 'userId', 'author', 'rating', 'title', 'comment', 'createdAt']) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       isValidReview(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(reviewId) &&
+                       (
+                         // Reviewer can edit their review
+                         (existing().userId == request.auth.uid && incoming().userId == existing().userId) ||
+                         // Other community members can upvote helpful count
+                         incoming().diff(existing()).affectedKeys().hasOnly(['helpfulVotes', 'updatedAt'])
+                       ) &&
+                       incoming().appId == existing().appId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidReview(incoming());
+
+      allow delete: if isSignedIn() &&
+                       isValidId(reviewId) &&
+                       existing().userId == request.auth.uid;
+    }
+  }
+}
